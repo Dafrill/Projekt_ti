@@ -16,6 +16,9 @@ namespace LocalMarketplace.Models
         // Treść wiadomości
         public string Content { get; set; } = string.Empty;
 
+        // Opcjonalne zdjęcie w wiadomości
+        public string? ImageUrl { get; set; }
+
         // Kiedy wysłano
         public DateTime SentAt { get; set; } = DateTime.UtcNow;
     }

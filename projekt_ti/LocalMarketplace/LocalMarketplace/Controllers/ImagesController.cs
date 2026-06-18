@@ -21,6 +21,9 @@ namespace LocalMarketplace.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("Nie przesłano żadnego pliku.");
 
+            if (file.Length > 10 * 1024 * 1024)
+                return BadRequest("Plik jest za duży. Maksymalny rozmiar to 10 MB.");
+
             // Tworzymy folder 'wwwroot/uploads' jeśli nie istnieje
             var uploadsFolder = Path.Combine(_env.ContentRootPath, "wwwroot", "uploads");
             if (!Directory.Exists(uploadsFolder))

@@ -64,7 +64,38 @@ namespace LocalMarketplace.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Advertisements");
+                });
+
+            modelBuilder.Entity("LocalMarketplace.Models.Comment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdvertisementId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ParentCommentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Favorite", b =>
@@ -103,6 +134,9 @@ namespace LocalMarketplace.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<int>("ReceiverId")
                         .HasColumnType("integer");
 
@@ -117,6 +151,29 @@ namespace LocalMarketplace.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("LocalMarketplace.Models.Reaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdvertisementId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Emoji")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Reactions");
+                });
+
             modelBuilder.Entity("LocalMarketplace.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -125,7 +182,14 @@ namespace LocalMarketplace.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nickname")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -140,6 +204,17 @@ namespace LocalMarketplace.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("LocalMarketplace.Models.Advertisement", b =>
+                {
+                    b.HasOne("LocalMarketplace.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Favorite", b =>

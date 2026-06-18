@@ -13,5 +13,7 @@ namespace LocalMarketplace.Data
         public DbSet<Message> Messages { get; set; }
 
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<Reaction> Reactions { get; set; }
+        public DbSet<Comment> Comments { get; set; }
     }
 }

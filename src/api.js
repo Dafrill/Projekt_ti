@@ -15,6 +15,12 @@ async function request(path, options = {}) {
   try { return JSON.parse(text) } catch { return text }
 }
 
+export function getUserId() {
+  const token = getToken()
+  if (!token) return null
+  try { return JSON.parse(atob(token.split('.')[1]))['UserId'] } catch { return null }
+}
+
 export async function login(email, password) {
   const token = await request('/auth/login', {
     method: 'POST',
@@ -22,13 +28,14 @@ export async function login(email, password) {
   })
   localStorage.setItem('token', token)
   const payload = JSON.parse(atob(token.split('.')[1]))
-  return { token, email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'], role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'], userId: payload['UserId'] }
+  localStorage.setItem('userId', payload['UserId'])
+  return { token, email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'], role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'], userId: payload['UserId'], nickname: payload['Nickname'], avatarUrl: payload['AvatarUrl'] || null }
 }
 
-export async function register(email, password) {
+export async function register(email, password, nickname) {
   return request('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, nickname }),
   })
 }
 
@@ -37,6 +44,7 @@ export async function getAds(params = {}) {
   if (params.search) query.set('search', params.search)
   if (params.category) query.set('category', params.category)
   if (params.location) query.set('location', params.location)
+  if (params.myOnly) query.set('myOnly', 'true')
   const qs = query.toString()
   return request(`/advertisements${qs ? '?' + qs : ''}`)
 }
@@ -108,6 +116,38 @@ export async function uploadImage(file) {
   return JSON.parse(text)
 }
 
+export async function getReactions(advertisementId) {
+  return request(`/reactions/${advertisementId}`)
+}
+
+export async function toggleReaction(advertisementId, emoji) {
+  return request('/reactions', {
+    method: 'POST',
+    body: JSON.stringify({ advertisementId, emoji }),
+  })
+}
+
+export async function getComments(advertisementId) {
+  return request(`/comments/${advertisementId}`)
+}
+
+export async function addComment(data) {
+  return request('/comments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateProfile(data) {
+  const token = await request('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+  localStorage.setItem('token', token)
+  return token
+}
+
 export function logout() {
   localStorage.removeItem('token')
+  localStorage.removeItem('userId')
 }

@@ -26,9 +26,10 @@ namespace LocalMarketplace.Controllers
         public async Task<ActionResult<IEnumerable<Advertisement>>> GetAdvertisements(
             [FromQuery] string? search,
             [FromQuery] string? category,
-            [FromQuery] string? location)
+            [FromQuery] string? location,
+            [FromQuery] bool myOnly = false)
         {
-            var query = _context.Advertisements.Where(a => a.IsApproved).AsQueryable();
+            var query = _context.Advertisements.AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
             {
@@ -39,14 +40,24 @@ namespace LocalMarketplace.Controllers
             if (!string.IsNullOrEmpty(category)) query = query.Where(a => a.Category.ToLower() == category.ToLower());
             if (!string.IsNullOrEmpty(location)) query = query.Where(a => a.Location.ToLower() == location.ToLower());
 
-            return await query.OrderByDescending(a => a.CreatedAt).ToListAsync();
+            if (myOnly)
+            {
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (userIdClaim != null)
+                {
+                    int currentUserId = int.Parse(userIdClaim);
+                    query = query.Where(a => a.UserId == currentUserId);
+                }
+            }
+
+            return await query.Include(a => a.User).OrderByDescending(a => a.CreatedAt).ToListAsync();
         }
 
         // GET /api/advertisements/{id} (Szczegóły)
         [HttpGet("{id}")]
         public async Task<ActionResult<Advertisement>> GetAdvertisement(int id)
         {
-            var advertisement = await _context.Advertisements.FindAsync(id);
+            var advertisement = await _context.Advertisements.Include(a => a.User).FirstOrDefaultAsync(a => a.Id == id);
             if (advertisement == null) return NotFound("Nie znaleziono ogłoszenia.");
             return advertisement;
         }
@@ -83,7 +94,7 @@ namespace LocalMarketplace.Controllers
             var userIdClaim = User.FindFirst("UserId")?.Value;
             if (userIdClaim == null || advertisement.UserId != int.Parse(userIdClaim))
             {
-                return Forbid("Możesz edytować tylko własne ogłoszenia!");
+                return StatusCode(403, "Możesz edytować tylko własne ogłoszenia!");
             }
 
             // Podmiana treści tekstowych
@@ -132,9 +143,11 @@ namespace LocalMarketplace.Controllers
             if (advertisement == null) return NotFound("Ogłoszenie nie istnieje.");
 
             var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (userIdClaim == null || advertisement.UserId != int.Parse(userIdClaim))
+            {
+                return StatusCode(403, "Możesz usunąć tylko własne ogłoszenia!");
+            }
 
-            // Pozwalamy usunąć jeśli to autor LUB jeśli ktoś jest adminem 
-            // (Na potrzeby prostoty: pozwalamy na delete zalogowanemu użytkownikowi z tokenem)
             _context.Advertisements.Remove(advertisement);
             await _context.SaveChangesAsync();
 

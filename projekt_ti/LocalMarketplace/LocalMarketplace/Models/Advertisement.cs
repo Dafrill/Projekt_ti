@@ -16,5 +16,6 @@ namespace LocalMarketplace.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int UserId { get; set; } // Kto dodał ogłoszenie
+        public User? User { get; set; }
     }
 }

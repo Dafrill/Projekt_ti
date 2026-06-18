@@ -139,3 +139,5 @@
 /home/magda/projects/msAGH/projekt_ti/LocalMarketplace/LocalMarketplace/obj/Debug/net10.0/LocalMarketplace.pdb
 /home/magda/projects/msAGH/projekt_ti/LocalMarketplace/LocalMarketplace/obj/Debug/net10.0/LocalMarketplace.genruntimeconfig.cache
 /home/magda/projects/msAGH/projekt_ti/LocalMarketplace/LocalMarketplace/obj/Debug/net10.0/ref/LocalMarketplace.dll
+/home/magda/projects/msAGH/projekt_ti/LocalMarketplace/LocalMarketplace/bin/Debug/net10.0/LocalMarketplace.staticwebassets.runtime.json
+/home/magda/projects/msAGH/projekt_ti/LocalMarketplace/LocalMarketplace/obj/Debug/net10.0/compressed/gnhec9iji7-{0}-exg5moz2pg-exg5moz2pg.gz

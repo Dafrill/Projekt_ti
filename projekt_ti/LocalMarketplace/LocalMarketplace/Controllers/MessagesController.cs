@@ -9,7 +9,7 @@ namespace LocalMarketplace.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // cały kontroler wymaga bycia zalogowanym
+    [Authorize]
     public class MessagesController : ControllerBase
     {
         private readonly DataContext _context;
@@ -19,44 +19,88 @@ namespace LocalMarketplace.Controllers
             _context = context;
         }
 
-        // 1. WYSYŁANIE WIADOMOŚCI (POST /api/messages)
         [HttpPost]
-        public async Task<ActionResult<Message>> SendMessage(Message message)
+        public async Task<ActionResult> SendMessage([FromBody] SendMessageRequest request)
         {
-            // Odczytujemy ID nadawcy bezpośrednio z tokenu JWT (bezpieczeństwo!)
             var userIdClaim = User.FindFirst("UserId")?.Value;
             if (userIdClaim == null) return Unauthorized("Brak tokenu autoryzacji.");
 
-            message.SenderId = int.Parse(userIdClaim);
-            message.SentAt = DateTime.UtcNow;
+            int senderId = int.Parse(userIdClaim);
 
-            // Sprawdzamy, czy ogłoszenie w ogóle istnieje
-            var adExists = await _context.Advertisements.AnyAsync(a => a.Id == message.AdvertisementId);
+            var adExists = await _context.Advertisements.AnyAsync(a => a.Id == request.AdvertisementId);
             if (!adExists) return BadRequest("Nie możesz wysłać wiadomości do nieistniejącego ogłoszenia.");
+
+            var message = new Message
+            {
+                SenderId = senderId,
+                ReceiverId = request.ReceiverId,
+                AdvertisementId = request.AdvertisementId,
+                Content = request.Content,
+                ImageUrl = request.ImageUrl,
+                SentAt = DateTime.UtcNow
+            };
 
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
-            return Ok(message);
+            var sender = await _context.Users.FindAsync(senderId);
+            var receiver = await _context.Users.FindAsync(request.ReceiverId);
+            var ad = await _context.Advertisements.FindAsync(request.AdvertisementId);
+
+            return Ok(new
+            {
+                message.Id,
+                message.SenderId,
+                message.ReceiverId,
+                message.AdvertisementId,
+                message.Content,
+                message.ImageUrl,
+                message.SentAt,
+                SenderEmail = sender!.Email,
+                SenderNickname = sender!.Nickname,
+                ReceiverEmail = receiver!.Email,
+                ReceiverNickname = receiver!.Nickname,
+                AdvertisementTitle = ad?.Title ?? ""
+            });
         }
 
-        // 2. SKRZYNKA ODBIORCZA I NADAWCZA (GET /api/messages)
-        // Zwraca historię wiadomości powiązanych z zalogowanym użytkownikiem
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Message>>> GetMyMessages()
+        public async Task<ActionResult> GetMyMessages()
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             if (userIdClaim == null) return Unauthorized();
 
             int currentUserId = int.Parse(userIdClaim);
 
-            // Pobieramy wiadomości, gdzie użytkownik jest NADAWCĄ lub ODBIORCĄ
             var messages = await _context.Messages
                 .Where(m => m.SenderId == currentUserId || m.ReceiverId == currentUserId)
+                .Select(m => new
+                {
+                    m.Id,
+                    m.SenderId,
+                    m.ReceiverId,
+                    m.AdvertisementId,
+                    m.Content,
+                    m.ImageUrl,
+                    m.SentAt,
+                    SenderEmail = _context.Users.Where(u => u.Id == m.SenderId).Select(u => u.Email).FirstOrDefault() ?? "",
+                    SenderNickname = _context.Users.Where(u => u.Id == m.SenderId).Select(u => u.Nickname).FirstOrDefault() ?? "",
+                    ReceiverEmail = _context.Users.Where(u => u.Id == m.ReceiverId).Select(u => u.Email).FirstOrDefault() ?? "",
+                    ReceiverNickname = _context.Users.Where(u => u.Id == m.ReceiverId).Select(u => u.Nickname).FirstOrDefault() ?? "",
+                    AdvertisementTitle = _context.Advertisements.Where(a => a.Id == m.AdvertisementId).Select(a => a.Title).FirstOrDefault() ?? "Nieznane ogłoszenie"
+                })
                 .OrderByDescending(m => m.SentAt)
                 .ToListAsync();
 
             return Ok(messages);
         }
+    }
+
+    public class SendMessageRequest
+    {
+        public int ReceiverId { get; set; }
+        public int AdvertisementId { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
     }
 }

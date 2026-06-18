@@ -6,5 +6,7 @@
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty; // Bezpieczne hasło
         public string Role { get; set; } = "Student"; // "Student" lub "Admin"
+        public string Nickname { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
     }
 }
