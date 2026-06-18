@@ -148,7 +148,10 @@ namespace LocalMarketplace.Controllers
             if (advertisement == null) return NotFound("Ogłoszenie nie istnieje.");
 
             var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (userIdClaim == null || advertisement.UserId != int.Parse(userIdClaim))
+            var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            bool isAdmin = roleClaim == "Admin";
+
+            if (userIdClaim == null || (!isAdmin && advertisement.UserId != int.Parse(userIdClaim)))
             {
                 return StatusCode(403, "Możesz usunąć tylko własne ogłoszenia!");
             }

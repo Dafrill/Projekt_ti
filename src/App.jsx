@@ -116,6 +116,8 @@ function AdCard({ ad, onFavoriteToggle, isFavorited, onContact, onDelete }) {
   const [myReaction, setMyReaction] = useState(null)
   const displayName = ad.user?.nickname || (ad.user?.email ? ad.user.email.split('@')[0] : 'Nieznany')
   const initials = displayName.charAt(0).toUpperCase() + (displayName.charAt(1) || displayName.charAt(0)).toUpperCase()
+  const token = localStorage.getItem('token')
+  const isAdmin = token && JSON.parse(atob(token.split('.')[1]))['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] === 'Admin'
 
   useEffect(() => {
     api.getReactions(ad.id).then((data) => {
@@ -145,7 +147,7 @@ function AdCard({ ad, onFavoriteToggle, isFavorited, onContact, onDelete }) {
             {initials}
           </div>
           <span className="text-xs font-medium text-[#5c2a1e]">{displayName}</span>
-          {ad.userId && Number(ad.userId) === Number(api.getUserId()) ? (
+          {ad.userId && (Number(ad.userId) === Number(api.getUserId()) || isAdmin) ? (
             <button onClick={onDelete} className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-red-400 text-white hover:bg-red-500 transition">
               Usuń
             </button>
@@ -562,20 +564,20 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   return (
     <div className="min-h-screen bg-[#fef0ea] flex flex-col">
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 sm:px-6 py-3 bg-white/60 backdrop-blur-md border-b border-[#e8b4a8]/30 shadow-sm relative z-20">
-        <div className="flex items-center gap-2 sm:gap-10 lg:gap-40 mr-auto">
+        <div className="flex items-center gap-2 sm:gap-10 lg:gap-40">
           <div className="bg-white rounded-lg shadow px-2 sm:px-3 py-1.5">
             <h1 className="text-xs sm:text-sm font-serif font-bold text-[#5c2a1e] leading-none">Ogłoszenia</h1>
             <p className="text-[6px] sm:text-[7px] font-light text-[#8c4a3a] tracking-[0.25em] uppercase">Miasteczkowe</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-center order-last sm:order-none w-full sm:w-auto mt-1 sm:mt-0">
           <div className="border-b-2 border-[#c98a7a] pb-1 hidden sm:block">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-[#8c4a3a]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto order-last sm:order-none mt-1 sm:mt-0">
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative flex-1 sm:flex-none sm:max-w-md">
             <input
               type="text"
               placeholder="Szukaj..."
@@ -597,7 +599,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto sm:ml-0">
+        <div className="flex items-center gap-2">
           <button onClick={() => setShowChatPanel(true)} className="lg:hidden p-1.5 text-[#d68a78] hover:text-[#c47562]" title="Czaty">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
