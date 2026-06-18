@@ -121,6 +121,11 @@ namespace LocalMarketplace.Controllers
                 return BadRequest("Błędne hasło.");
             }
 
+            if (user.IsBanned)
+            {
+                return BadRequest("Twoje konto zostało zablokowane.");
+            }
+
             // Jeśli hasło pasuje, generujemy token JWT
             string token = CreateToken(user);
             return Ok(token); // Ten token React zapisze sobie w pamięci

@@ -68,6 +68,23 @@ namespace LocalMarketplace.Controllers
                 UserNickname = user!.Nickname
             });
         }
+
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<ActionResult> DeleteComment(int id)
+        {
+            var userId = int.Parse(User.FindFirstValue("UserId")!);
+            var user = await _context.Users.FindAsync(userId);
+            var comment = await _context.Comments.FindAsync(id);
+
+            if (comment == null) return NotFound("Komentarz nie istnieje.");
+            if (comment.UserId != userId && user?.Role != "Admin")
+                return StatusCode(403, "Nie możesz usunąć tego komentarza.");
+
+            _context.Comments.Remove(comment);
+            await _context.SaveChangesAsync();
+            return Ok("Komentarz został usunięty.");
+        }
     }
 
     public class CommentRequest

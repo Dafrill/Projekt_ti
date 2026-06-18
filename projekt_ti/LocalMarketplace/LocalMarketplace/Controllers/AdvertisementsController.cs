@@ -74,6 +74,11 @@ namespace LocalMarketplace.Controllers
             if (userIdClaim == null) return Unauthorized("Brak tokenu.");
 
             advertisement.UserId = int.Parse(userIdClaim);
+
+            var user = await _context.Users.FindAsync(int.Parse(userIdClaim));
+            if (user == null || user.IsBanned)
+                return StatusCode(403, "Twoje konto jest zablokowane. Nie możesz dodawać ogłoszeń.");
+
             advertisement.IsApproved = false; // Każde nowe ogłoszenie trafia do poczekalni admina
             advertisement.CreatedAt = DateTime.UtcNow;
 

@@ -27,6 +27,10 @@ namespace LocalMarketplace.Controllers
 
             int senderId = int.Parse(userIdClaim);
 
+            var senderUser = await _context.Users.FindAsync(senderId);
+            if (senderUser == null || senderUser.IsBanned)
+                return StatusCode(403, "Twoje konto jest zablokowane. Nie możesz wysyłać wiadomości.");
+
             var adExists = await _context.Advertisements.AnyAsync(a => a.Id == request.AdvertisementId);
             if (!adExists) return BadRequest("Nie możesz wysłać wiadomości do nieistniejącego ogłoszenia.");
 

@@ -147,6 +147,30 @@ export async function updateProfile(data) {
   return token
 }
 
+export async function getUsers() {
+  return request('/admin/users')
+}
+
+export async function banUser(id) {
+  return request(`/admin/users/${id}/ban`, { method: 'PUT' })
+}
+
+export async function unbanUser(id) {
+  return request(`/admin/users/${id}/unban`, { method: 'PUT' })
+}
+
+export async function deleteUser(id) {
+  return request(`/admin/users/${id}`, { method: 'DELETE' })
+}
+
+export async function getUserAds(id) {
+  return request(`/admin/users/${id}/ads`)
+}
+
+export async function deleteComment(commentId) {
+  return request(`/comments/${commentId}`, { method: 'DELETE' })
+}
+
 export function logout() {
   localStorage.removeItem('token')
   localStorage.removeItem('userId')

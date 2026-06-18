@@ -168,7 +168,9 @@ function AdCard({ ad, onFavoriteToggle, isFavorited, onContact, onDelete }) {
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-bold text-[#5c2a1e] truncate">{ad.title}</h3>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-sm font-bold text-[#d68a78] whitespace-nowrap">{ad.price} zł</span>
+              {ad.category !== 'Pytania i odpowiedzi' && ad.category !== 'Zgubione/Znalezione' && (
+                <span className="text-sm font-bold text-[#d68a78] whitespace-nowrap">{ad.price} zł</span>
+              )}
               <button onClick={() => onFavoriteToggle?.(ad.id)} className="p-1 hover:scale-110 transition">
                 <svg className="w-5 h-5" fill={isFavorited ? '#fbbf24' : 'none'} stroke="#fbbf24" strokeWidth="2" viewBox="0 0 24 24">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -224,6 +226,18 @@ function CommentSection({ adId }) {
     } catch {}
   }
 
+  async function handleDeleteComment(commentId) {
+    if (!confirm('Usunąć ten komentarz?')) return
+    try {
+      await api.deleteComment(commentId)
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+    } catch (err) { alert(err.message) }
+  }
+
+  const currentUserId = Number(api.getUserId())
+  const token = localStorage.getItem('token')
+  const isAdmin = token && JSON.parse(atob(token.split('.')[1]))['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] === 'Admin'
+  const canDelete = (userId) => currentUserId === userId || isAdmin
   const topComments = comments.filter((c) => !c.parentCommentId)
   const replies = (parentId) => comments.filter((c) => c.parentCommentId === parentId)
 
@@ -249,19 +263,25 @@ function CommentSection({ adId }) {
       {topComments.length > 0 && (
         <div className="space-y-2">
           {topComments.map((c) => (
-            <div key={c.id}>
-              <div className="flex items-start gap-1.5">
-                <span className="text-xs font-medium text-[#5c2a1e] shrink-0">{c.userNickname || c.userEmail.split('@')[0]}</span>
-                <span className="text-xs text-gray-600">{c.content}</span>
-                <button onClick={() => setReplyTo(c)} className="ml-auto text-[9px] text-[#c98a7a] hover:text-[#8c4a3a] shrink-0">odpowiedz</button>
-              </div>
-              {replies(c.id).map((r) => (
-                <div key={r.id} className="ml-5 mt-1 flex items-start gap-1.5">
-                  <span className="text-xs font-medium text-[#8c4a3a] shrink-0">{r.userNickname || r.userEmail.split('@')[0]}</span>
-                  <span className="text-xs text-gray-600">{r.content}</span>
+              <div key={c.id}>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-xs font-medium text-[#5c2a1e] shrink-0">{c.userNickname || c.userEmail.split('@')[0]}</span>
+                  <span className="text-xs text-gray-600">{c.content}</span>
+                  <button onClick={() => setReplyTo(c)} className="text-[9px] text-[#c98a7a] hover:text-[#8c4a3a] shrink-0">odpowiedz</button>
+                  {canDelete(c.userId) && (
+                    <button onClick={() => handleDeleteComment(c.id)} className="text-[9px] text-red-400 hover:text-red-600 shrink-0">usuń</button>
+                  )}
                 </div>
-              ))}
-            </div>
+                {replies(c.id).map((r) => (
+                  <div key={r.id} className="ml-5 mt-1 flex items-start gap-1.5">
+                    <span className="text-xs font-medium text-[#8c4a3a] shrink-0">{r.userNickname || r.userEmail.split('@')[0]}</span>
+                    <span className="text-xs text-gray-600">{r.content}</span>
+                    {canDelete(r.userId) && (
+                      <button onClick={() => handleDeleteComment(r.id)} className="text-[9px] text-red-400 hover:text-red-600 shrink-0">usuń</button>
+                    )}
+                  </div>
+                ))}
+              </div>
           ))}
         </div>
       )}
@@ -276,6 +296,7 @@ function ChatPanel({ user, chat, chatOpen, showChatPanel, onClose, onSelectChat 
   const [loading, setLoading] = useState(false)
   const [sendingImage, setSendingImage] = useState(false)
   const fileInputRef = useRef(null)
+  const chatEndRef = useRef(null)
 
   useEffect(() => {
     api.getMessages().then(setConversations).catch(() => {})
@@ -290,10 +311,15 @@ function ChatPanel({ user, chat, chatOpen, showChatPanel, onClose, onSelectChat 
           (m.senderId === Number(chat.userId) || m.receiverId === Number(chat.userId)) &&
           m.advertisementId === chat.adId
         )
+        filtered.reverse()
         setMessages(filtered)
       }).catch(() => {}).finally(() => setLoading(false))
     }
   }, [chat])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   function otherName(msg) {
     const isMine = msg.senderId === Number(api.getUserId())
@@ -399,6 +425,7 @@ function ChatPanel({ user, chat, chatOpen, showChatPanel, onClose, onSelectChat 
                   </div>
                 </div>
               ))}
+              <div ref={chatEndRef} />
             </div>
             <div className="flex gap-1 sm:gap-2 p-2 sm:p-3 border-t border-gray-200 items-center">
               <input
@@ -456,6 +483,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const [showChatPanel, setShowChatPanel] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
 
   function handleSelectChat(conv) {
     setChat({ userId: conv.otherId, email: conv.otherEmail, nickname: conv.otherNickname, adId: conv.advertisementId, adTitle: conv.adTitle })
@@ -575,6 +603,13 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
+          {user.role === 'Admin' && (
+            <button onClick={() => setShowAdminPanel(true)} className="p-1.5 text-[#d68a78] hover:text-[#c47562]" title="Panel Admina">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </button>
+          )}
 
           <div className="relative">
             <button
@@ -632,6 +667,8 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                 <option value="Meble">Meble</option>
                 <option value="Elektronika">Elektronika</option>
                 <option value="Usługi">Usługi</option>
+                <option value="Pytania i odpowiedzi">Pytania i odpowiedzi</option>
+                <option value="Zgubione/Znalezione">Zgubione/Znalezione</option>
               </select>
             </div>
 
@@ -704,6 +741,8 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                   <option value="Meble">Meble</option>
                   <option value="Elektronika">Elektronika</option>
                   <option value="Usługi">Usługi</option>
+                  <option value="Pytania i odpowiedzi">Pytania i odpowiedzi</option>
+                  <option value="Zgubione/Znalezione">Zgubione/Znalezione</option>
                 </select>
               </div>
               <div>
@@ -766,6 +805,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
 
       {showNewAd && <NewAdModal onClose={() => { setShowNewAd(false); fetchAds() }} />}
       {showEditProfile && <EditProfileModal user={user} onClose={(updatedUser) => { setShowEditProfile(false); if (updatedUser) onUpdateUser(updatedUser) }} />}
+      {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
     </div>
   )
 }
@@ -798,7 +838,8 @@ function NewAdModal({ onClose }) {
     e.preventDefault()
     setSaving(true)
     try {
-      await api.createAd({ title, description, price: parseFloat(price), category, location, imageUrl })
+      const noPrice = category === 'Pytania i odpowiedzi' || category === 'Zgubione/Znalezione'
+      await api.createAd({ title, description, price: noPrice ? 0 : parseFloat(price), category, location, imageUrl })
       onClose()
     } catch (err) {
       alert(err.message)
@@ -818,12 +859,18 @@ function NewAdModal({ onClose }) {
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tytuł" required className="w-full px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]" />
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Opis" rows={3} required className="w-full px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]" />
           <div className="flex gap-3">
-            <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" placeholder="Cena (zł)" required className="flex-1 px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]" />
+            {category !== 'Pytania i odpowiedzi' && category !== 'Zgubione/Znalezione' ? (
+              <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" placeholder="Cena (zł)" required className="flex-1 px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]" />
+            ) : (
+              <input value="" type="text" placeholder="Brak ceny" disabled className="flex-1 px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-gray-400 bg-gray-50" />
+            )}
             <select value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]">
               <option value="Nauka">Nauka</option>
               <option value="Meble">Meble</option>
               <option value="Elektronika">Elektronika</option>
               <option value="Usługi">Usługi</option>
+              <option value="Pytania i odpowiedzi">Pytania i odpowiedzi</option>
+              <option value="Zgubione/Znalezione">Zgubione/Znalezione</option>
             </select>
           </div>
           <select value={location} onChange={(e) => setLocation(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#e8b4a8] text-sm text-[#5c2a1e] focus:outline-none focus:ring-2 focus:ring-[#d68a78]">
@@ -936,6 +983,110 @@ function EditProfileModal({ user, onClose }) {
             {saving ? 'Zapisywanie...' : 'Zapisz'}
           </button>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function AdminPanel({ onClose }) {
+  const [users, setUsers] = useState([])
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [userAds, setUserAds] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { fetchUsers() }, [])
+
+  async function fetchUsers() {
+    setLoading(true)
+    try {
+      const data = await api.getUsers()
+      setUsers(data)
+    } catch {} finally { setLoading(false) }
+  }
+
+  async function handleBan(id) {
+    if (!confirm('Zbanować tego użytkownika?')) return
+    try { await api.banUser(id); fetchUsers() } catch (err) { alert(err.message) }
+  }
+
+  async function handleUnban(id) {
+    try { await api.unbanUser(id); fetchUsers() } catch (err) { alert(err.message) }
+  }
+
+  async function handleDeleteUser(id) {
+    if (!confirm('Na pewno usunąć to konto wraz ze wszystkimi danymi?')) return
+    try { await api.deleteUser(id); fetchUsers(); if (selectedUser?.id === id) { setSelectedUser(null); setUserAds([]) } } catch (err) { alert(err.message) }
+  }
+
+  async function handleShowAds(id) {
+    try {
+      const ads = await api.getUserAds(id)
+      setUserAds(ads)
+      setSelectedUser(users.find(u => u.id === id))
+    } catch (err) { alert(err.message) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-[#5c2a1e]">Panel Admina</h3>
+          <button onClick={onClose} className="text-[#c98a7a] hover:text-[#8c4a3a] text-xl">&times;</button>
+        </div>
+
+        {loading ? (
+          <p className="text-[#c98a7a] text-center text-sm">Ładowanie...</p>
+        ) : (
+          <div className="flex gap-4 flex-1 min-h-0">
+            <div className="w-1/2 overflow-y-auto border-r border-gray-200 pr-3">
+              <p className="text-xs font-medium text-[#8c4a3a] mb-2">Użytkownicy ({users.length})</p>
+              {users.map(u => (
+                <div key={u.id} className={`flex items-center justify-between p-2 rounded-lg mb-1 cursor-pointer hover:bg-gray-50 ${selectedUser?.id === u.id ? 'bg-[#fef0ea]' : ''}`} onClick={() => handleShowAds(u.id)}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-[#5c2a1e] truncate">{u.nickname || u.email} {u.role === 'Admin' ? '👑' : ''}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{u.email} • {u.adCount} ogł.</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0 ml-2">
+                    {u.role !== 'Admin' && (
+                      <>
+                        {u.isBanned ? (
+                          <button onClick={(e) => { e.stopPropagation(); handleUnban(u.id) }} className="text-[10px] px-2 py-0.5 rounded-full bg-green-400 text-white hover:bg-green-500">Odbanuj</button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); handleBan(u.id) }} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-400 text-white hover:bg-orange-500">Ban</button>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id) }} className="text-[10px] px-2 py-0.5 rounded-full bg-red-400 text-white hover:bg-red-500">Usuń</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="w-1/2 overflow-y-auto">
+              {selectedUser ? (
+                <>
+                  <p className="text-xs font-medium text-[#8c4a3a] mb-2">
+                    Ogłoszenia {selectedUser.nickname || selectedUser.email} ({userAds.length})
+                  </p>
+                  {userAds.length === 0 ? (
+                    <p className="text-xs text-gray-400">Brak ogłoszeń</p>
+                  ) : (
+                    userAds.map(ad => (
+                      <div key={ad.id} className="p-2 rounded-lg bg-gray-50 mb-2">
+                        <p className="text-xs font-medium text-[#5c2a1e]">{ad.title}</p>
+                        <p className="text-[10px] text-gray-500">{ad.category} • {ad.price} zł</p>
+                        <p className="text-[10px] text-gray-400 truncate">{ad.description}</p>
+                        {ad.imageUrl && <img src={ad.imageUrl} alt="" className="w-16 h-16 object-cover rounded mt-1" />}
+                      </div>
+                    ))
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-gray-400 text-center pt-10">Wybierz użytkownika z listy</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

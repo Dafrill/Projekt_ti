@@ -45,13 +45,27 @@ namespace LocalMarketplace.Controllers
         public async Task<ActionResult> ToggleReaction([FromBody] ReactionRequest request)
         {
             var userId = int.Parse(User.FindFirstValue("UserId")!);
+            var user = await _context.Users.FindAsync(userId);
+            bool isAdmin = user?.Role == "Admin";
 
             var existing = await _context.Reactions
                 .FirstOrDefaultAsync(r => r.AdvertisementId == request.AdvertisementId && r.UserId == userId && r.Emoji == request.Emoji);
 
             if (existing != null)
             {
-                _context.Reactions.Remove(existing);
+                if (isAdmin)
+                {
+                    _context.Reactions.Add(new Reaction
+                    {
+                        AdvertisementId = request.AdvertisementId,
+                        UserId = userId,
+                        Emoji = request.Emoji
+                    });
+                }
+                else
+                {
+                    _context.Reactions.Remove(existing);
+                }
             }
             else
             {

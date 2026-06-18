@@ -1,4 +1,5 @@
 using LocalMarketplace.Data;
+using LocalMarketplace.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -54,5 +55,21 @@ app.UseAuthorization();
 app.UseStaticFiles();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+    if (!db.Users.Any(u => u.Email == "admin"))
+    {
+            db.Users.Add(new User
+            {
+                Email = "admin@admin.pl",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin"),
+                Role = "Admin",
+                Nickname = "Administrator"
+            });
+        db.SaveChanges();
+    }
+}
 
 app.Run();
