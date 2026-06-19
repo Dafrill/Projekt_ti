@@ -66,7 +66,7 @@ namespace LocalMarketplace.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Advertisements");
+                    b.ToTable("Advertisements", (string)null);
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Comment", b =>
@@ -95,7 +95,7 @@ namespace LocalMarketplace.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments", (string)null);
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Favorite", b =>
@@ -116,7 +116,7 @@ namespace LocalMarketplace.Migrations
 
                     b.HasIndex("AdvertisementId");
 
-                    b.ToTable("Favorites");
+                    b.ToTable("Favorites", (string)null);
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Message", b =>
@@ -148,7 +148,7 @@ namespace LocalMarketplace.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.Reaction", b =>
@@ -171,7 +171,7 @@ namespace LocalMarketplace.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Reactions");
+                    b.ToTable("Reactions", (string)null);
                 });
 
             modelBuilder.Entity("LocalMarketplace.Models.User", b =>
@@ -188,6 +188,9 @@ namespace LocalMarketplace.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Nickname")
                         .IsRequired()

@@ -34,7 +34,7 @@ namespace LocalMarketplace.Controllers
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(a => a.Title.ToLower().Contains(search.ToLower())
-                                      || a.Description.ToLower().Contains(search.ToLower()));
+                                       || a.Description.ToLower().Contains(search.ToLower()));
             }
 
             if (!string.IsNullOrEmpty(category)) query = query.Where(a => a.Category.ToLower() == category.ToLower());
@@ -46,6 +46,7 @@ namespace LocalMarketplace.Controllers
                 if (userIdClaim != null)
                 {
                     int currentUserId = int.Parse(userIdClaim);
+                    // Pokaż wszystkie ogłoszenia użytkownika (również niezatwierdzone)
                     query = query.Where(a => a.UserId == currentUserId);
                 }
             }
@@ -79,7 +80,7 @@ namespace LocalMarketplace.Controllers
             if (user == null || user.IsBanned)
                 return StatusCode(403, "Twoje konto jest zablokowane. Nie możesz dodawać ogłoszeń.");
 
-            advertisement.IsApproved = false; // Każde nowe ogłoszenie trafia do poczekalni admina
+            advertisement.IsApproved = true; // Od razu widoczne dla wszystkich
             advertisement.CreatedAt = DateTime.UtcNow;
 
             _context.Advertisements.Add(advertisement);
@@ -109,10 +110,10 @@ namespace LocalMarketplace.Controllers
             advertisement.Category = updatedAd.Category;
             advertisement.Location = updatedAd.Location;
             advertisement.ImageUrl = updatedAd.ImageUrl;
-            advertisement.IsApproved = false; // Po edycji znowu sprawdzamy czy nie ma tam banów
+            advertisement.IsApproved = true;
 
             await _context.SaveChangesAsync();
-            return Ok("Ogłoszenie zaktualizowane i wysłane do ponownej moderacji.");
+            return Ok("Ogłoszenie zaktualizowane.");
         }
 
         // 3. MODUŁ ADMINISTRACYJNY (CMS / MODERACJA)
