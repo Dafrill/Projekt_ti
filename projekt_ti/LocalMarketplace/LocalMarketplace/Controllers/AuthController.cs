@@ -79,7 +79,7 @@ namespace LocalMarketplace.Controllers
                 return BadRequest("Użytkownik o takim adresie e-mail już istnieje!");
             }
 
-            // Haszowanie hasła (magia bezpieczeństwa)
+            
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var nickname = !string.IsNullOrWhiteSpace(request.Nickname)
